@@ -1,203 +1,233 @@
 // Import required modules
-import express, { response } from 'express';
-import apiClient from './configs/aza_finance.js';
-import {CurrencyInfoApi, TransactionRequest, TransactionsApi, SendersApi, Sender,AccountValidationRequest, AccountValidationApi, PayoutMethodDetails, PayoutMethod, Recipient, SenderRequest, Transaction, Webhook, TransactionWebhook, RecipientWebhook, PayoutMethodWebhook, SenderWebhook, DocumentWebhook
-      } from 'transferzero-sdk';
-
+import express, { response } from "express";
+import apiClient from "./configs/aza_finance.js";
+import {
+  CurrencyInfoApi,
+  TransactionRequest,
+  TransactionsApi,
+  SendersApi,
+  Sender,
+  AccountValidationRequest,
+  AccountValidationApi,
+  PayoutMethodDetails,
+  PayoutMethod,
+  Recipient,
+  SenderRequest,
+  Transaction,
+  Webhook,
+  TransactionWebhook,
+  RecipientWebhook,
+  PayoutMethodWebhook,
+  SenderWebhook,
+  DocumentWebhook,
+} from "transferzero-sdk";
 
 // Create an Express application
 const app = express();
-const port = 5000; // Port on which the server will run
+const port = 6000; // Port on which the server will run
 
-app.use(express.json())
+app.use(express.json());
 
 // Define a sample route : this one is working
-app.get('/', (req, res) => {
-    let apiInstance = new CurrencyInfoApi(apiClient);
-    apiInstance.infoCurrencies().then((data) => {
-      return res.json(data)
-    }, (error) => {
+app.get("/", (req, res) => {
+  let apiInstance = new CurrencyInfoApi(apiClient);
+  apiInstance.infoCurrencies().then(
+    (data) => {
+      return res.json(data);
+    },
+    (error) => {
       if (error.isValidationError) {
         let result = error.getResponseObject();
-        return res.json(result)
+        return res.json(result);
       } else {
         res.send("Exception when calling CurrencyInfoApi#infoCurrencies");
       }
-    });
+    }
+  );
 });
 
-app.post('/createSender',async (req, res)=>{
-        const api = new SendersApi(apiClient);
-        const sender = new Sender();
-      
-        sender.country = 'US';
-        sender.phone_country = 'US';
-        sender.phone_number = '+15555551234';
-        sender.email = 'myperson@home.org';
-        sender.first_name = 'Paula';
-        sender.last_name = 'English';
-        sender.ip = '127.0.0.1';
-        sender.city = 'New York';
-        sender.street = '20 W 34th St';
-        sender.address_description = 'Office Address';
-        sender.postal_code = '798984';
-        sender.birth_date = '1974-12-31';
-        sender.documents = [];
-        sender.external_id = 'primenet-12348';
-      
-        try {
-          const senderRequest = new SenderRequest();
-          senderRequest.sender = sender;
-      
-          const senderResponse = await api.postSenders(senderRequest);
+app.get("/getSender/:id", async (req, res) => {
+  let apiInstance = new SendersApi(apiClient);
 
-          res.json(senderResponse.object)
-
-        } catch (e) {
-          if (e.isValidationError) {
-            const senderResponse = e.getResponseObject();
-            res.status(500).json(senderResponse.object.errors)
-          } else {
-            res.status(500).json({msg:"General error", error: e})
-          }
-        }
-})
-
-app.post('/transactions',async (req, res)=>{
-
-    const request = new TransactionRequest()
-
-    request.transaction = req.body
-
-    const api = new TransactionsApi(apiClient)
-
-    try {
-        const response = await api.createAndFundTransaction(request)
-        return res.json(response)
-    } catch (error) {
-        return res.json(error)
+  apiInstance.getSender(req.params.id).then(
+    (data) => {
+      res.status(200).json(data);
+    },
+    (error) => {
+      if (error.isValidationError) {
+        let result = error.getResponseObject();
+        console.log(result);
+        console.error(
+          "WARN: Validation error occurred when calling the endpoint"
+        );
+      } else {
+        console.error("Exception when calling SendersApi#getSender");
+        throw error;
+      }
     }
-})
+  );
+});
 
-app.post('/transactionExample', async (req, res)=>{
+app.post("/createSender", async (req, res) => {
+  const api = new SendersApi(apiClient);
+  const sender = new Sender();
 
-    const api = new TransactionsApi(apiClient);
+  sender.country = "US";
+  sender.phone_country = "US";
+  sender.phone_number = "+15555551234";
+  sender.email = "myperson@home.org";
+  sender.first_name = "Paula";
+  sender.last_name = "English";
+  sender.ip = "127.0.0.1";
+  sender.city = "New York";
+  sender.street = "20 W 34th St";
+  sender.address_description = "Office Address";
+  sender.postal_code = "798984";
+  sender.birth_date = "1974-12-31";
+  sender.documents = [];
+  sender.external_id = "primenet-12349";
 
-    const transaction = new Transaction();
+  try {
+    const senderRequest = new SenderRequest();
+    senderRequest.sender = sender;
+
+    const senderResponse = await api.postSenders(senderRequest);
+
+    res.json(senderResponse.object);
+  } catch (e) {
+    if (e.isValidationError) {
+      const senderResponse = e.getResponseObject();
+      res.status(500).json(senderResponse.object.errors);
+    } else {
+      res.status(500).json({ msg: "General error", error: e });
+    }
+  }
+});
+
+app.post("/transactions", async (req, res) => {
+  const request = new TransactionRequest();
+
+  request.transaction = req.body;
+
+  const api = new TransactionsApi(apiClient);
+
+  try {
+    const response = await api.createAndFundTransaction(request);
+    return res.json(response);
+  } catch (error) {
+    return res.json(error);
+  }
+});
+
+app.post("/transactionExample", async (req, res) => {
+  const api = new TransactionsApi(apiClient);
+
+  const transaction = new Transaction();
 
   // When adding a sender to transaction, please use either an id or external_id. Providing both will result in a validation error.
   // Please see our documentation at https://docs.transferzero.com/docs/transaction-flow/#sender
   const sender = new Sender();
-  sender.id = 'f69d0936-c6c7-49e6-8c03-a4e4f7e72354';
+  sender.id = "f69d0936-c6c7-49e6-8c03-a4e4f7e72354";
 
   // You can find the various payout options at https://docs.transferzero.com/docs/transaction-flow/#payout-details
   const ngnBankDetails = new PayoutMethodDetails();
-  ngnBankDetails.bank_account = '123456789';
-  ngnBankDetails.bank_account_type = '20';
-  ngnBankDetails.bank_code = '082';
-  ngnBankDetails.first_name = 'First';
-  ngnBankDetails.last_name = 'Last';
+  ngnBankDetails.bank_account = "123456789";
+  ngnBankDetails.bank_account_type = "20";
+  ngnBankDetails.bank_code = "082";
+  ngnBankDetails.first_name = "First";
+  ngnBankDetails.last_name = "Last";
 
   const payoutMethod = new PayoutMethod();
-  payoutMethod.type = 'NGN::Bank';
+  payoutMethod.type = "NGN::Bank";
   payoutMethod.details = ngnBankDetails;
 
   // Please see https://docs.transferzero.com/docs/transaction-flow/#requested-amount-and-currency
   // on what the request amount and currencies do
   const recipient = new Recipient();
   recipient.requested_amount = 15000;
-  recipient.requested_currency = 'NGN';
+  recipient.requested_currency = "NGN";
   recipient.payout_method = payoutMethod;
 
   // Similarly you can check https://docs.transferzero.com/docs/transaction-flow/#requested-amount-and-currency
   // on details about the input currency parameter
-  transaction.input_currency = 'USD';
+  transaction.input_currency = "USD";
   transaction.sender = sender;
   transaction.recipients = [recipient];
 
   // Find more details on external IDs at https://docs.transferzero.com/docs/transaction-flow/#external-id
-  transaction.external_id = 'EXTRAN-555999';
+  transaction.external_id = "EXTRAN-555999";
 
   try {
     const transactionRequest = new TransactionRequest();
     transactionRequest.transaction = transaction;
     const transactionResponse = await api.postTransactions(transactionRequest);
- 
+
     return res.json(transactionResponse);
   } catch (e) {
-     return res.json(e)
+    return res.json(e);
   }
-}
-)
+});
 
-app.get('/transactions/:id',async (req, res)=>{
+app.get("/transactions/:id", async (req, res) => {
+  const api = new TransactionsApi(apiClient);
 
-    const api = new TransactionsApi(apiClient)
+  try {
+    const response = await api.getTransactions({ external_id: req.params.id });
 
-    try {
-        const response = await api.getTransactions({external_id: req.params.id})
-
-        return res.json(response)
-    } catch (error) {
-        return res.json(error)
-    }
-})
+    return res.json(response);
+  } catch (error) {
+    return res.json(error);
+  }
+});
 
 //working
-app.get('/accountInfo', async(req, res)=>{
+app.get("/accountInfo", async (req, res) => {
+  const request = new AccountValidationRequest();
+  request.bank_account = "9040009999999";
 
- const request = new AccountValidationRequest();
-  request.bank_account = '9040009999999';
-
-  request.bank_code = '889999999';
+  request.bank_code = "889999999";
   request.country = AccountValidationRequest.CountryEnum.GH;
   request.currency = AccountValidationRequest.CurrencyEnum.GHS;
   request.method = AccountValidationRequest.MethodEnum.BANK;
   const api = new AccountValidationApi(apiClient);
   try {
     const response = await api.postAccountValidations(request);
-    res.json(response)
+    res.json(response);
   } catch (e) {
-     
-      res.status(500).json(e)
-   
+    res.status(500).json(e);
   }
-})
+});
 
-app.delete('/recipient/:id', (req, res)=>{
+app.delete("/recipient/:id", (req, res) => {});
 
-})
+let opts = { external_id: "EXTRAN-5557" };
 
-let opts = {external_id: 'EXTRAN-5557'}
+//let opts = { externalId: 'EXTSEN-5555' };
 
-    //let opts = { externalId: 'EXTSEN-5555' };
-
-app.get('/findSenderByExternalId', async(req,res)=>{
-    // Find more details on external IDs at https://docs.transferzero.com/docs/transaction-flow/#external-id
+app.get("/findSenderByExternalId", async (req, res) => {
+  // Find more details on external IDs at https://docs.transferzero.com/docs/transaction-flow/#external-id
 
   const api = new SendersApi(apiClient, {});
-  
+
   try {
     const response = await api.getSenders(opts);
-    response.object.forEach(sender => console.log(sender));
-    res.json(response)
+    response.object.forEach((sender) => console.log(sender));
+    res.json(response);
   } catch (e) {
-    res.json(e)
+    res.json(e);
   }
-})
+});
 
+app.get("/getTransactionStatus", (req, res) => {
+  const webhookHeader = {
+    "Authorization-Nonce": "authorization-nonce",
+    "Authorization-Key": "authorization-key",
+    "Authorization-Signature": "authorization-signature",
+  };
 
-app.get('/getTransactionStatus', (req, res)=>{
+  const webhookUrl = "http://webhook.url";
 
-    const webhookHeader = {
-        "Authorization-Nonce": "authorization-nonce",
-        "Authorization-Key": "authorization-key",
-        "Authorization-Signature": "authorization-signature"
-      };
-    
-      const webhookUrl = "http://webhook.url";
-    
-      const webhookContent = `{
+  const webhookContent = `{
         "webhook": "02b769ff-ffff-ffff-ffff-820d285d76c7",
         "event": "transaction.created",
         "object": {
@@ -353,67 +383,56 @@ app.get('/getTransactionStatus', (req, res)=>{
           "expires_at": "2017-07-24T16:08:58Z"
         }
       }`;
-    
-      // Once setting up an endpoint where you'll be receiving callbacks you can use the following code snippet
-      // to both verify that the webhook we sent out is legitimate, and then parse it's contents regardless of type.
-    
-      // The details you need to provide are:
-      // - the body of the webhook/callback you received as a string
-      // - the url of your webhook, where you are awaiting the callbacks - this has to be the full URL
-      // - the authentication headers you have received on your webhook endpoint - as an object
-     try {
 
-        if (apiClient.validateRequest(webhookUrl, webhookContent, webhookHeader)) {
-            const webhook = apiClient.parseResponseString(
-              webhookContent,
-             Webhook
-            );
-        
-            if (webhook.event.startsWith('transaction')) {
-              const transactionWebhook = apiClient.parseResponseString(
-                webhookContent,
-                TransactionWebhook
-              );
-              console.log(transactionWebhook);
-            } else if (webhook.event.startsWith('recipient')) {
-              const recipientWebhook = apiClient.parseResponseString(
-                webhookContent,
-                RecipientWebhook
-              );
-              console.log(recipientWebhook);
-            } else if (webhook.event.startsWith('payout_method')) {
-              const payoutMethodWebhook = apiClient.parseResponseString(
-                webhookContent,
-                PayoutMethodWebhook
-              );
-              console.log(payoutMethodWebhook);
-            } else if (webhook.event.startsWith('sender')) {
-              const senderWebhook = apiClient.parseResponseString(
-                webhookContent,
-                SenderWebhook
-              );
-              console.log(senderWebhook);
-            } else if (webhook.event.startsWith('document')) {
-              const documentWebhook = apiClient.parseResponseString(
-                webhookContent,
-                DocumentWebhook
-              );
-              console.log(documentWebhook);
-            }
-        
-     }} catch (error) {
-        
-        console.log("Could not verify webhook signature");
-     }
-      
-     
-        
-      
-    
-})
+  // Once setting up an endpoint where you'll be receiving callbacks you can use the following code snippet
+  // to both verify that the webhook we sent out is legitimate, and then parse it's contents regardless of type.
 
+  // The details you need to provide are:
+  // - the body of the webhook/callback you received as a string
+  // - the url of your webhook, where you are awaiting the callbacks - this has to be the full URL
+  // - the authentication headers you have received on your webhook endpoint - as an object
+  try {
+    if (apiClient.validateRequest(webhookUrl, webhookContent, webhookHeader)) {
+      const webhook = apiClient.parseResponseString(webhookContent, Webhook);
+
+      if (webhook.event.startsWith("transaction")) {
+        const transactionWebhook = apiClient.parseResponseString(
+          webhookContent,
+          TransactionWebhook
+        );
+        console.log(transactionWebhook);
+      } else if (webhook.event.startsWith("recipient")) {
+        const recipientWebhook = apiClient.parseResponseString(
+          webhookContent,
+          RecipientWebhook
+        );
+        console.log(recipientWebhook);
+      } else if (webhook.event.startsWith("payout_method")) {
+        const payoutMethodWebhook = apiClient.parseResponseString(
+          webhookContent,
+          PayoutMethodWebhook
+        );
+        console.log(payoutMethodWebhook);
+      } else if (webhook.event.startsWith("sender")) {
+        const senderWebhook = apiClient.parseResponseString(
+          webhookContent,
+          SenderWebhook
+        );
+        console.log(senderWebhook);
+      } else if (webhook.event.startsWith("document")) {
+        const documentWebhook = apiClient.parseResponseString(
+          webhookContent,
+          DocumentWebhook
+        );
+        console.log(documentWebhook);
+      }
+    }
+  } catch (error) {
+    console.log("Could not verify webhook signature");
+  }
+});
 
 // Start the server
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });
