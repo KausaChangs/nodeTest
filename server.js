@@ -20,6 +20,9 @@ import {
   PayoutMethodWebhook,
   SenderWebhook,
   DocumentWebhook,
+  Debit,
+  DebitRequestWrapper,
+  AccountDebitsApi,
 } from "transferzero-sdk";
 
 // Create an Express application
@@ -119,7 +122,7 @@ app.post("/transactions", async (req, res) => {
   }
 });
 
-app.post("/transactionExample", async (req, res) => {
+app.post("/createAndFundTransaction", async (req, res) => {
   const api = new TransactionsApi(apiClient);
 
   const transaction = new Transaction();
@@ -155,12 +158,42 @@ app.post("/transactionExample", async (req, res) => {
   transaction.recipients = [recipient];
 
   // Find more details on external IDs at https://docs.transferzero.com/docs/transaction-flow/#external-id
-  transaction.external_id = "EXTRAN-555999";
+  transaction.external_id = "EXTRAN-555999778";
 
   try {
     const transactionRequest = new TransactionRequest();
     transactionRequest.transaction = transaction;
     const transactionResponse = await api.postTransactions(transactionRequest);
+
+    if (transactionResponse.object.id != null) {
+      // Please see https://docs.transferzero.com/docs/transaction-flow/#funding-transactions
+      // on details about funding transactions
+      const debit = new Debit();
+      debit.currency = transactionResponse.object.input_currency;
+      debit.to_id = transactionResponse.object.id;
+      debit.to_type = "Transaction";
+
+      const debitRequest = new DebitRequestWrapper();
+      debitRequest.debit = debit;
+
+      const debitsApi = new AccountDebitsApi(apiClient);
+      try {
+        const debitListResponse = await debitsApi.postAccountsDebits(
+          debitRequest
+        );
+        console.log("Transaction Funded Successfully");
+        console.log(debitListResponse.object[0]);
+        res.json(debitListResponse);
+      } catch (e) {
+        if (e.isValidationError) {
+          const debitListResponse = e.getResponseObject();
+          console.error("Transaction could not be funded");
+          console.error(debitListResponse.object[0].errors);
+        } else {
+          console.error(e.error.stack);
+        }
+      }
+    }
 
     return res.json(transactionResponse);
   } catch (e) {
@@ -178,6 +211,43 @@ app.get("/transactions/:id", async (req, res) => {
   } catch (error) {
     return res.json(error);
   }
+});
+
+app.post("/createAndFundTransactionExample", async (req, res) => {
+  const api = new TransactionsApi(apiClient);
+
+  // const transactionId = await api.createTransactionExample();
+
+  if (transactionId != null) {
+    // Please see https://docs.transferzero.com/docs/transaction-flow/#funding-transactions
+    // on details about funding transactions
+    const debit = new Debit();
+    debit.currency = "GHS";
+    debit.to_id = transactionId;
+    debit.to_type = "Transaction";
+
+    const debitRequest = new DebitRequestWrapper();
+    debitRequest.debit = debit;
+
+    const debitsApi = new AccountDebitsApi(apiClient);
+    try {
+      const debitListResponse = await debitsApi.postAccountsDebits(
+        debitRequest
+      );
+      console.log("Transaction Funded Successfully");
+      console.log(debitListResponse.object[0]);
+      res.json(debitListResponse);
+    } catch (e) {
+      if (e.isValidationError) {
+        const debitListResponse = e.getResponseObject();
+        console.error("Transaction could not be funded");
+        console.error(debitListResponse.object[0].errors);
+      } else {
+        console.error(e.error.stack);
+      }
+    }
+  }
+  return transactionId;
 });
 
 //working
