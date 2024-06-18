@@ -23,6 +23,7 @@ import {
   Debit,
   DebitRequestWrapper,
   AccountDebitsApi,
+  RecipientsApi,
 } from "transferzero-sdk";
 
 // Create an Express application
@@ -75,20 +76,20 @@ app.post("/createSender", async (req, res) => {
   const api = new SendersApi(apiClient);
   const sender = new Sender();
 
-  sender.country = "US";
-  sender.phone_country = "US";
-  sender.phone_number = "+15555551234";
-  sender.email = "myperson@home.org";
-  sender.first_name = "Paula";
-  sender.last_name = "English";
+  sender.country = "ZM";
+  sender.phone_country = "ZM";
+  sender.phone_number = "+260973918510";
+  sender.email = "kausa@home.org";
+  sender.first_name = "Kausa";
+  sender.last_name = "Changaya";
   sender.ip = "127.0.0.1";
-  sender.city = "New York";
+  sender.city = "Lusaka";
   sender.street = "20 W 34th St";
   sender.address_description = "Office Address";
   sender.postal_code = "798984";
-  sender.birth_date = "1974-12-31";
+  sender.birth_date = "1998-12-31";
   sender.documents = [];
-  sender.external_id = "primenet-12349";
+  sender.external_id = "primenet-1234998";
 
   try {
     const senderRequest = new SenderRequest();
@@ -130,7 +131,7 @@ app.post("/createAndFundTransaction", async (req, res) => {
   // When adding a sender to transaction, please use either an id or external_id. Providing both will result in a validation error.
   // Please see our documentation at https://docs.transferzero.com/docs/transaction-flow/#sender
   const sender = new Sender();
-  sender.id = "f69d0936-c6c7-49e6-8c03-a4e4f7e72354";
+  sender.id = "f9e1ab52-fa44-4f3f-b091-ca78f075a9e5";
 
   // You can find the various payout options at https://docs.transferzero.com/docs/transaction-flow/#payout-details
   const ngnBankDetails = new PayoutMethodDetails();
@@ -158,7 +159,7 @@ app.post("/createAndFundTransaction", async (req, res) => {
   transaction.recipients = [recipient];
 
   // Find more details on external IDs at https://docs.transferzero.com/docs/transaction-flow/#external-id
-  transaction.external_id = "EXTRAN-555999778";
+  transaction.external_id = "EXTRAN-555999778899988";
 
   try {
     const transactionRequest = new TransactionRequest();
@@ -196,6 +197,18 @@ app.post("/createAndFundTransaction", async (req, res) => {
     }
 
     return res.json(transactionResponse);
+  } catch (e) {
+    return res.json(e);
+  }
+});
+
+app.delete("/cancelTransaction", async (req, res) => {
+  const api = new RecipientsApi(apiClient);
+  const recipientid = "93bd361c-4f0b-4ae1-af29-1d57397bae01";
+
+  try {
+    const respo = await api.deleteRecipient(recipientid);
+    return res.json(respo);
   } catch (e) {
     return res.json(e);
   }
